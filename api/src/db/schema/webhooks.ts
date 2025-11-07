@@ -6,6 +6,7 @@ export const webhooks = pgTable('webhooks', {
     name: text('name').notNull(),
     url: text('url').notNull(),
     pathname: text().notNull(),
+    method: text('method').notNull().default('GET'),
     ip: text().notNull(),
     statusCode: integer().notNull(),
     contentType: text().notNull(),

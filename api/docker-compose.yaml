@@ -7,9 +7,27 @@ services:
       POSTGRES_PASSWORD: root
       POSTGRES_DB: webhooks
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  seed:
+    image: node:20-alpine
+    container_name: webhooks-seed
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgresql://postgres:root@webhooks-db:5432/webhooks
+    volumes:
+      - ./src:/app/src:ro
+      - ./package.json:/app/package.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - seed_node_modules:/app/node_modules
+    command: sh -c "npm install -g pnpm@10.20.0 && pnpm install --frozen-lockfile=false && pnpm exec tsx src/db/seed.ts"
+    depends_on:
+      - postgres
+    profiles:
+      - seed
+
 volumes:
   postgres_data:
+  seed_node_modules:

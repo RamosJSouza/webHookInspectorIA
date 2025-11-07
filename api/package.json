@@ -10,6 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "dotenv -e .env -- drizzle-kit migrate",
     "db:migrate:docker": "powershell -Command \"Get-Content src/db/migrations/*.sql | docker exec -i webhooks-db psql -U postgres -d webhooks\"",
+    "db:seed": "dotenv -e .env -- tsx src/db/seed.ts",
+    "db:seed:docker": "docker-compose --profile seed run --rm seed",
     "db:studio": "dotenv -e .env -- drizzle-kit studio --host 0.0.0.0 --port 4983",
     "db:studio:docker": "docker exec -it webhooks-db psql -U postgres -d webhooks"
   },

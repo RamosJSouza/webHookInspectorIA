@@ -65,10 +65,12 @@ cd ../web && pnpm install
 
 Crie um arquivo `.env` na pasta `api/`:
 ```env
-DATABASE_URL="postgresql://postgres:root@localhost:5433/webhooks"
+DATABASE_URL=postgresql://postgres:root@localhost:5434/webhooks
 PORT=3333
 NODE_ENV=development
 ```
+
+⚠️ **IMPORTANTE:** A porta é **5434** (não 5433) para evitar conflito com PostgreSQL local na porta 5433.
 
 ## 🐳 Docker
 
@@ -76,12 +78,12 @@ NODE_ENV=development
 
 ```bash
 cd api
-docker-compose up -d
+docker-compose up -d postgres
 ```
 
-Isso iniciará o PostgreSQL na porta **5433** com as credenciais:
+Isso iniciará o PostgreSQL na porta **5434** com as credenciais:
 - **Host:** `localhost`
-- **Porta:** `5433`
+- **Porta:** `5434` (mapeada de 5432 do container)
 - **Database:** `webhooks`
 - **Username:** `postgres`
 - **Password:** `root`

@@ -8,6 +8,9 @@ import { serializerCompiler,
     type ZodTypeProvider } from 'fastify-type-provider-zod';
 import { listWebhooks } from './routes/list-webhooks';
 import { env } from './env';
+import { getWebhooks } from './routes/get-webhook';
+import { deleteWebhooks } from './routes/delete-webhook';
+import { captureWebhooks } from './routes/capture-webhook';
 
 const app = fastify().withTypeProvider<ZodTypeProvider>();
 
@@ -33,15 +36,13 @@ app.register(fastifySwagger, {
 });
 
 app.register(ScalarApiReference, {
-  routePrefix: '/docs',
-  exposeRoute: true,
-  swagger: {
-    info: { title: 'API Webhook Inspector with IA' },
-  },
+  routePrefix: '/docs'
 });
 
 app.register(listWebhooks);
-
+app.register(getWebhooks);
+app.register(deleteWebhooks);
+app.register(captureWebhooks);
 
 app.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
   if (err) {
