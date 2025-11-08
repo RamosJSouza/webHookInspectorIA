@@ -11,6 +11,7 @@ import { env } from './env';
 import { getWebhooks } from './routes/get-webhook';
 import { deleteWebhooks } from './routes/delete-webhook';
 import { captureWebhooks } from './routes/capture-webhook';
+import { generateHandle } from './routes/generate-handle';
 
 const app = fastify().withTypeProvider<ZodTypeProvider>();
 
@@ -43,6 +44,7 @@ app.register(listWebhooks);
 app.register(getWebhooks);
 app.register(deleteWebhooks);
 app.register(captureWebhooks);
+app.register(generateHandle);
 
 app.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
   if (err) {
