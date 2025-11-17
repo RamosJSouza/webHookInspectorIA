@@ -1,142 +1,231 @@
+import { randomBytes, randomUUID } from 'node:crypto';
+
 import { db } from './index';
 import { webhooks } from './schema/webhooks';
+
+type StrapiWebhook = {
+    name: string;
+    url: string;
+    pathname: string;
+    method: string;
+    ip: string;
+    statusCode: number;
+    contentType: string;
+    headers: Record<string, string>;
+    queryParams?: Record<string, string> | null;
+    body: string;
+};
+
+const now = new Date();
+
+const createStrapiPayload = (
+    event: string,
+    model: string,
+    entry: Record<string, unknown>,
+    meta: Record<string, unknown> = {},
+) =>
+    JSON.stringify(
+        {
+            id: randomUUID(),
+            event,
+            createdAt: now.toISOString(),
+            model,
+            ...meta,
+            entry,
+        },
+        null,
+        2,
+    );
+
+const byteLength = (payload: string) => Buffer.byteLength(payload, 'utf8');
+
+const defaultHeaders = (event: string): Record<string, string> => ({
+    'content-type': 'application/json',
+    'user-agent': 'Strapi-Hookshot/5.0',
+    'x-strapi-event': event,
+    'x-strapi-signature': `sha256=${randomBytes(32).toString('hex')}`,
+});
+
+const strapiWebhooks: StrapiWebhook[] = [
+    {
+        name: 'Strapi Article Created',
+        url: 'https://cms.example.com/content-manager/collection-types/api::article.article',
+        pathname: '/content-manager/collection-types/api::article.article',
+        method: 'POST',
+        ip: '10.100.0.5',
+        statusCode: 201,
+        contentType: 'application/json',
+        headers: defaultHeaders('entry.create'),
+        body: createStrapiPayload('entry.create', 'api::article.article', {
+            id: 101,
+            title: 'Strapi getting started',
+            slug: 'strapi-getting-started',
+            category: 'guides',
+            publishedAt: null,
+        }),
+    },
+    {
+        name: 'Strapi Article Updated',
+        url: 'https://cms.example.com/content-manager/collection-types/api::article.article/101',
+        pathname: '/content-manager/collection-types/api::article.article/101',
+        method: 'PUT',
+        ip: '10.100.0.6',
+        statusCode: 200,
+        contentType: 'application/json',
+        headers: defaultHeaders('entry.update'),
+        body: createStrapiPayload('entry.update', 'api::article.article', {
+            id: 101,
+            title: 'Strapi getting started (updated)',
+            slug: 'strapi-getting-started',
+            category: 'guides',
+            publishedAt: null,
+        }),
+    },
+    {
+        name: 'Strapi Article Published',
+        url: 'https://cms.example.com/content-manager/collection-types/api::article.article/101/actions/publish',
+        pathname: '/content-manager/collection-types/api::article.article/101/actions/publish',
+        method: 'POST',
+        ip: '10.100.0.7',
+        statusCode: 200,
+        contentType: 'application/json',
+        headers: defaultHeaders('entry.publish'),
+        body: createStrapiPayload(
+            'entry.publish',
+            'api::article.article',
+            {
+                id: 101,
+                title: 'Strapi getting started (updated)',
+                slug: 'strapi-getting-started',
+                category: 'guides',
+                publishedAt: now.toISOString(),
+            },
+            { environment: 'production' },
+        ),
+    },
+    {
+        name: 'Strapi Article Unpublished',
+        url: 'https://cms.example.com/content-manager/collection-types/api::article.article/101/actions/unpublish',
+        pathname: '/content-manager/collection-types/api::article.article/101/actions/unpublish',
+        method: 'POST',
+        ip: '10.100.0.8',
+        statusCode: 200,
+        contentType: 'application/json',
+        headers: defaultHeaders('entry.unpublish'),
+        body: createStrapiPayload(
+            'entry.unpublish',
+            'api::article.article',
+            {
+                id: 101,
+                title: 'Strapi getting started (updated)',
+                slug: 'strapi-getting-started',
+                category: 'guides',
+                publishedAt: null,
+            },
+            { environment: 'production' },
+        ),
+    },
+    {
+        name: 'Strapi Article Deleted',
+        url: 'https://cms.example.com/content-manager/collection-types/api::article.article/101',
+        pathname: '/content-manager/collection-types/api::article.article/101',
+        method: 'DELETE',
+        ip: '10.100.0.9',
+        statusCode: 200,
+        contentType: 'application/json',
+        headers: defaultHeaders('entry.delete'),
+        body: createStrapiPayload('entry.delete', 'api::article.article', {
+            id: 101,
+        }),
+    },
+    {
+        name: 'Strapi Media Uploaded',
+        url: 'https://cms.example.com/content-manager/upload',
+        pathname: '/content-manager/upload',
+        method: 'POST',
+        ip: '10.100.0.10',
+        statusCode: 201,
+        contentType: 'application/json',
+        headers: defaultHeaders('media.create'),
+        body: createStrapiPayload('media.create', 'plugin::upload.file', {
+            id: 501,
+            name: 'hero.jpg',
+            mime: 'image/jpeg',
+            size: 248.3,
+            url: '/uploads/hero.jpg',
+        }),
+    },
+    {
+        name: 'Strapi Media Updated',
+        url: 'https://cms.example.com/content-manager/upload/files/501',
+        pathname: '/content-manager/upload/files/501',
+        method: 'PUT',
+        ip: '10.100.0.11',
+        statusCode: 200,
+        contentType: 'application/json',
+        headers: defaultHeaders('media.update'),
+        body: createStrapiPayload('media.update', 'plugin::upload.file', {
+            id: 501,
+            name: 'hero-banner.jpg',
+            alternativeText: 'Homepage hero banner',
+            url: '/uploads/hero-banner.jpg',
+        }),
+    },
+    {
+        name: 'Strapi Media Deleted',
+        url: 'https://cms.example.com/content-manager/upload/files/501',
+        pathname: '/content-manager/upload/files/501',
+        method: 'DELETE',
+        ip: '10.100.0.12',
+        statusCode: 200,
+        contentType: 'application/json',
+        headers: defaultHeaders('media.delete'),
+        body: createStrapiPayload('media.delete', 'plugin::upload.file', {
+            id: 501,
+            name: 'hero-banner.jpg',
+        }),
+    },
+    {
+        name: 'Strapi Review Workflow Transition',
+        url: 'https://cms.example.com/content-manager/review-workflows/workflows/1/stages/2',
+        pathname: '/content-manager/review-workflows/workflows/1/stages/2',
+        method: 'POST',
+        ip: '10.100.0.13',
+        statusCode: 200,
+        contentType: 'application/json',
+        headers: defaultHeaders('review-workflow.stage.transition'),
+        body: createStrapiPayload(
+            'review-workflow.stage.transition',
+            'api::article.article',
+            {
+                id: 101,
+                title: 'Strapi getting started (updated)',
+                workflowStage: 'Ready for QA',
+            },
+            { workflowId: 1, fromStageId: 1, toStageId: 2 },
+        ),
+    },
+];
 
 async function seed() {
     console.log('🌱 Starting seed...');
 
     try {
-        const webhook1Body = JSON.stringify({
-            status: 'completed',
-            videoId: 'abc123',
-            url: 'https://cdn.example.com/videos/abc123.mp4',
-        }, null, 2);
-        
-        const webhook2Body = JSON.stringify({
-            event: 'payment.succeeded',
-            data: {
-                amount: 10000,
-                currency: 'usd',
-                customer: 'cus_123456',
-            },
-        }, null, 2);
-        
-        const webhook3Body = JSON.stringify({
-            notificationId: 'notif_123',
-            sent: true,
-            timestamp: new Date().toISOString(),
-        }, null, 2);
-        
-        const webhook4Body = JSON.stringify({
-            orderId: 'order_789',
-            status: 'shipped',
-            trackingNumber: 'TRACK123456',
-        }, null, 2);
-        
-        const webhook5Body = 'Hello World!';
+        await db.delete(webhooks);
 
-        const seedWebhooks = [
-            {
-                name: 'POST /video/upload/status',
-                url: 'https://api.example.com/video/upload/status',
-                pathname: '/video/upload/status',
-                method: 'POST',
-                ip: '127.0.0.1',
-                statusCode: 200,
-                contentType: 'application/json',
-                contentLength: webhook1Body.length,
-                queryParams: {
-                    videoId: 'abc123',
-                    format: 'mp4',
-                } as Record<string, string>,
-                headers: {
-                    'content-type': 'application/json',
-                    'user-agent': 'Mozilla/5.0',
-                    'accept': 'application/json',
-                    'authorization': 'Bearer token123',
-                } as Record<string, string>,
-                body: webhook1Body,
-            },
-            {
-                name: 'POST /payment/webhook',
-                url: 'https://api.example.com/payment/webhook?provider=stripe',
-                pathname: '/payment/webhook',
-                method: 'POST',
-                ip: '192.168.1.100',
-                statusCode: 200,
-                contentType: 'application/json',
-                contentLength: webhook2Body.length,
-                queryParams: {
-                    provider: 'stripe',
-                } as Record<string, string>,
-                headers: {
-                    'content-type': 'application/json',
-                    'user-agent': 'Stripe/1.0',
-                    'stripe-signature': 'signature123',
-                    'x-forwarded-for': '192.168.1.100',
-                } as Record<string, string>,
-                body: webhook2Body,
-            },
-            {
-                name: 'GET /user/notification',
-                url: 'https://api.example.com/user/notification?userId=123&type=email',
-                pathname: '/user/notification',
-                method: 'GET',
-                ip: '10.0.0.1',
-                statusCode: 200,
-                contentType: 'application/json',
-                contentLength: webhook3Body.length,
-                queryParams: {
-                    userId: '123',
-                    type: 'email',
-                } as Record<string, string>,
-                headers: {
-                    'content-type': 'application/json',
-                    'user-agent': 'CustomApp/1.0',
-                    'api-key': 'key_abc123',
-                } as Record<string, string>,
-                body: webhook3Body,
-            },
-            {
-                name: 'POST /order/update',
-                url: 'https://api.example.com/order/update',
-                pathname: '/order/update',
-                method: 'POST',
-                ip: '172.16.0.1',
-                statusCode: 201,
-                contentType: 'application/json',
-                contentLength: webhook4Body.length,
-                queryParams: null,
-                headers: {
-                    'content-type': 'application/json',
-                    'user-agent': 'ECommerceBot/2.0',
-                    'x-api-version': 'v2',
-                } as Record<string, string>,
-                body: webhook4Body,
-            },
-            {
-                name: 'PUT /webhook/test',
-                url: 'https://api.example.com/webhook/test?id=test123',
-                pathname: '/webhook/test',
-                method: 'PUT',
-                ip: '127.0.0.1',
-                statusCode: 200,
-                contentType: 'text/plain',
-                contentLength: webhook5Body.length,
-                queryParams: {
-                    id: 'test123',
-                } as Record<string, string>,
-                headers: {
-                    'content-type': 'text/plain',
-                    'user-agent': 'TestClient/1.0',
-                } as Record<string, string>,
-                body: webhook5Body,
-            },
-        ];
+        const seedPayload = strapiWebhooks.map((hook) => ({
+            ...hook,
+            queryParams: hook.queryParams ?? null,
+            contentLength: byteLength(hook.body),
+        }));
 
-        const result = await db.insert(webhooks).values(seedWebhooks).returning({ id: webhooks.id });
+        const result = await db
+            .insert(webhooks)
+            .values(seedPayload)
+            .returning({ id: webhooks.id });
 
         console.log(`✅ Successfully seeded ${result.length} webhooks`);
-        console.log('📋 Webhook IDs:', result.map(r => r.id).join(', '));
+        console.log('📋 Webhook IDs:', result.map((r) => r.id).join(', '));
     } catch (error) {
         console.error('❌ Error seeding database:', error);
         process.exit(1);

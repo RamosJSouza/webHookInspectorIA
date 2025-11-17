@@ -1,0 +1,1 @@
+ALTER TABLE "webhooks" ADD COLUMN "method" text DEFAULT 'GET' NOT NULL;
